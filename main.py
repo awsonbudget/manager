@@ -2,19 +2,26 @@ from __future__ import annotations
 from enum import Enum
 import requests
 import time
-from multiprocessing import Process
 from collections import deque
 from fastapi import FastAPI, UploadFile, Request, HTTPException, Depends
 from pydantic import BaseModel
 import uuid
-
+import asyncio
+import os
+import shutil
 
 app = FastAPI()
 
 
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(manager.main_worker())
+
+
 @app.on_event("shutdown")
 async def shutdown_event():
-    manager.stop_worker()
+    for task in asyncio.all_tasks():
+        task.cancel()
 
 
 @app.middleware("http")
@@ -27,7 +34,7 @@ async def add_process_time_header(request: Request, call_next):
 
 
 async def verify_setup():
-    if manager.worker == None:
+    if manager.init == False:
         raise HTTPException(status_code=400, detail="cluster: please initialize first")
 
 
@@ -47,13 +54,10 @@ class Status(str, Enum):
 
 
 class Job(object):
-    def __init__(
-        self, name: str, script: UploadFile, status: Status = Status.REGISTERED
-    ):
+    def __init__(self, name: str, status: Status = Status.REGISTERED):
         # TODO: manager needs a more centralized view of all jobs
         self.name: str = name
         self.id: str = str(uuid.uuid4())
-        self.script: UploadFile = script
         self.status: Status = status
 
     def toJSON(self) -> dict:
@@ -68,14 +72,14 @@ class Manager(object):
     def __init__(self):
         self.queue: deque[Job] = deque()
         self.jobs: dict[str, Job] = dict()
-        self.worker: Process | None = None
+        self.init = False
+        # self.worker: Process | None = None
 
-
-    def main_worker(self):
+    async def main_worker(self):
         count = 0
         while True:
             print(self.queue)
-            time.sleep(3)
+            await asyncio.sleep(3)
             count += 1
             if self.queue:
                 res = requests.get(clusters["5551"] + "/internal/available/").json()
@@ -83,34 +87,23 @@ class Manager(object):
                     job = self.queue.pop()
                     job.status = Status.RUNNING
                     print("--------------------")
-                    print(
-                        requests.post(
-                            clusters["5551"] + "/cloud/job/",
-                            params={
-                                "job_name": job.name,
-                                "job_id": job.id,
-                            },
-                            files={"job_script": job.script.file},
-                        ).json()
-                    )
+                    with open(f"tmp/{job.id}.sh") as f:
+                        print(
+                            requests.post(
+                                clusters["5551"] + "/cloud/job/",
+                                params={
+                                    "job_name": job.name,
+                                    "job_id": job.id,
+                                },
+                                files={"job_script": f},
+                            ).json()
+                        )
                     print("Job allocated")
                     print(f"Name: {job.name}")
                     print(f"ID: {job.id}")
                     print("--------------------")
             else:
                 print(f"{count}: waiting for jobs")
-
-    def start_worker(self):
-        self.worker = Process(target=self.main_worker)
-        self.worker.start()
-        print("worker is now running")
-
-    def stop_worker(self):
-        if self.worker != None:
-            self.worker.terminate()
-            print("worker has been stopped")
-        else:
-            print("worker was not running")
 
 
 manager = Manager()
@@ -120,8 +113,13 @@ clusters = {"5551": "http://localhost:5551"}
 @app.post("/cloud/")
 async def init() -> Resp:
     """management: 1. cloud init"""
-    if manager.worker != None:
+    if manager.init == True:
         return Resp(status=True, msg="manager: warning already initialized")
+
+    try:
+        shutil.rmtree("tmp")
+    except OSError:
+        print("tmp was already cleaned")
 
     for name, url in clusters.items():
         res = requests.post(url + "/cloud/").json()
@@ -129,7 +127,7 @@ async def init() -> Resp:
             return Resp(
                 status=False, msg=f"manager: cluster {name} failed to initialize"
             )
-    manager.start_worker()
+    manager.init = True
     return Resp(status=True, msg="manager: all cluster initialized")
 
 
@@ -204,10 +202,15 @@ async def job_ls(node_id: str | None = None) -> Resp:
 @app.post("/cloud/job/", dependencies=[Depends(verify_setup)])
 async def job_launch(job_name: str, job_script: UploadFile) -> Resp:
     """management: 6. cloud launch PATH_TO_JOB"""
-    job = Job(name=job_name, script=job_script)
+    job = Job(name=job_name)
     manager.queue.append(job)
     print(manager.queue)
     manager.jobs[job.id] = job
+
+    os.makedirs("tmp", exist_ok=True)
+    with open(os.path.join("tmp", f"{job.id}.sh"), "wb") as f:
+        f.write(await job_script.read())
+
     return Resp(status=True, data={"job_id": job.id})
 
 
@@ -226,7 +229,6 @@ async def job_abort(job_id: str) -> Resp:
             params={"job_id": job_id},
         ).content
     )
-
 
 
 @app.get("/cloud/job/log/", dependencies=[Depends(verify_setup)])
