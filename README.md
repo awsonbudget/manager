@@ -11,4 +11,4 @@ Once that is done, use `poetry shell` to activate the environment.
 
 In order to run the manager, you need 1 command:
 
-- To start the Flask server: `python3 app.py`
+- To start the FastAPI server: `uvicorn main:app --reload --port 5550`
