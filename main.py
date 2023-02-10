@@ -18,12 +18,6 @@ async def startup_event():
     asyncio.create_task(manager.main_worker())
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    for task in asyncio.all_tasks():
-        task.cancel()
-
-
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
