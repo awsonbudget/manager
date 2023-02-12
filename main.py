@@ -46,7 +46,7 @@ async def verify_setup():
 class Resp(BaseModel):
     status: bool
     msg: str = ""
-    data: list | dict | None = None
+    data: list | dict | str | None = None
 
 
 class Status(str, Enum):
@@ -249,7 +249,7 @@ async def job_log(job_id: str) -> Resp:
 
 @app.get("/cloud/node/log/", dependencies=[Depends(verify_setup)])
 async def node_log(node_id: str) -> Resp:
-    """monitoring: 5. cloud log node NODE_ID"""
+    """monitoring: 5. cloud node log NODE_ID"""
     return Resp.parse_raw(
         requests.get(
             clusters["5551"] + "/cloud/node/log/",
