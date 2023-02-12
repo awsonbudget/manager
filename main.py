@@ -5,12 +5,23 @@ import time
 from collections import deque
 from fastapi import FastAPI, UploadFile, Request, HTTPException, Depends
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import asyncio
 import os
 import shutil
 
 app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
