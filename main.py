@@ -258,7 +258,7 @@ async def node_log(node_id: str) -> Resp:
     )
 
 
-@app.post("/cloud/callback/", dependencies=[Depends(verify_setup)])
+@app.post("/internal/callback/", dependencies=[Depends(verify_setup)])
 async def callback(job_id: str) -> Resp:
     if job_id not in manager.jobs:
         raise Exception(
