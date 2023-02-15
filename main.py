@@ -10,8 +10,10 @@ import uuid
 import asyncio
 import os
 import shutil
+from dotenv import dotenv_values
 
 app = FastAPI()
+config = dotenv_values(".env")
 
 origins = ["*"]
 
@@ -112,7 +114,7 @@ class Manager(object):
 
 
 manager = Manager()
-clusters = {"5551": "http://localhost:5551"}
+clusters = {"5551": config["CLUSTER"]}
 
 
 @app.post("/cloud/")
