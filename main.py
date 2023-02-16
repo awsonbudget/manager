@@ -66,12 +66,14 @@ class Job(object):
         self.name: str = name
         self.id: str = str(uuid.uuid4())
         self.status: Status = status
+        self.node: str | None = None
 
     def toJSON(self) -> dict:
         return {
             "id": self.id,
             "name": self.name,
             "status": self.status,
+            "node": self.node,
         }
 
 
@@ -95,26 +97,29 @@ class Manager(object):
                     job.status = Status.RUNNING
                     print("--------------------")
                     with open(f"tmp/{job.id}.sh") as f:
-                        print(
-                            requests.post(
-                                clusters["5551"] + "/cloud/job/",
-                                params={
-                                    "job_name": job.name,
-                                    "job_id": job.id,
-                                },
-                                files={"job_script": f},
-                            ).json()
-                        )
+                        res = requests.post(
+                            clusters["5551"] + "/cloud/job/",
+                            params={
+                                "job_name": job.name,
+                                "job_id": job.id,
+                            },
+                            files={"job_script": f},
+                        ).json()
+                        self.jobs[job.id].node = res["data"]["node_id"]
+
                     print("Job allocated")
                     print(f"Name: {job.name}")
                     print(f"ID: {job.id}")
+                    print(f"Node: {job.node}")
                     print("--------------------")
             else:
                 print(f"{count}: waiting for jobs")
 
 
 manager = Manager()
-clusters = {"5551": config["CLUSTER"]}
+assert config["CLUSTER"] != None
+
+clusters: dict[str, str] = {"5551": config["CLUSTER"]}
 
 
 @app.post("/cloud/")
@@ -156,6 +161,7 @@ async def pod_register(pod_name: str) -> Resp:
 
 @app.delete("/cloud/pod/", dependencies=[Depends(verify_setup)])
 async def pod_rm(pod_name: str):
+    "management: 3. cloud pod rm POD_NAME"
     return Resp.parse_raw(
         requests.delete(
             clusters["5551"] + "/cloud/pod/", params={"pod_name": pod_name}
@@ -198,12 +204,13 @@ async def node_rm(node_name: str) -> Resp:
 @app.get("/cloud/job/", dependencies=[Depends(verify_setup)])
 async def job_ls(node_id: str | None = None) -> Resp:
     """monitoring: 3. cloud job ls [NODE_ID]"""
-    return Resp.parse_raw(
-        requests.get(
-            clusters["5551"] + "/cloud/job/",
-            params={"node_id": node_id},
-        ).content
-    )
+    if node_id != None:
+        return Resp(
+            status=True,
+            data=[j.toJSON() for j in manager.jobs.values() if j.node == node_id],
+        )
+
+    return Resp(status=True, data=[j.toJSON() for j in manager.jobs.values()])
 
 
 @app.post("/cloud/job/", dependencies=[Depends(verify_setup)])
