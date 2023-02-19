@@ -15,4 +15,4 @@ In order to run the manager, you need 1 command:
 
 ## McGill VM
 
-- `uvicorn main:app --port 5000`
+- `uvicorn src.main:app --port 5000`
