@@ -1,9 +1,18 @@
 from __future__ import annotations
 from enum import Enum
+import json
 import requests
 import time
 from collections import deque
-from fastapi import FastAPI, UploadFile, Request, HTTPException, Depends
+from fastapi import (
+    FastAPI,
+    UploadFile,
+    Request,
+    HTTPException,
+    Depends,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
@@ -24,6 +33,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
 
 
 @app.on_event("startup")
@@ -49,6 +77,18 @@ class Resp(BaseModel):
     status: bool
     msg: str = ""
     data: list | dict | str | None = None
+
+
+class WsResp(BaseModel):
+    type: WsType
+    data: list
+
+
+class WsType(str, Enum):
+    POD = "pod"
+    NODE = "node"
+    JOB = "job"
+    ERROR = "error"
 
 
 class Status(str, Enum):
@@ -82,7 +122,7 @@ class Manager(object):
         self.queue: deque[Job] = deque()
         self.jobs: dict[str, Job] = dict()
         self.init = False
-        # self.worker: Process | None = None
+        self.ws = ConnectionManager()
 
     async def main_worker(self):
         count = 0
@@ -112,6 +152,7 @@ class Manager(object):
                     print(f"ID: {job.id}")
                     print(f"Node: {job.node}")
                     print("--------------------")
+                    await update(WsType.JOB)
             else:
                 print(f"{count}: waiting for jobs")
 
@@ -140,6 +181,9 @@ async def init() -> Resp:
                 status=False, msg=f"manager: cluster {name} failed to initialize"
             )
     manager.init = True
+    await update(WsType.POD)
+    await update(WsType.NODE)
+    await update(WsType.JOB)
     return Resp(status=True, msg="manager: all cluster initialized")
 
 
@@ -152,21 +196,25 @@ async def pod_ls() -> Resp:
 @app.post("/cloud/pod/", dependencies=[Depends(verify_setup)])
 async def pod_register(pod_name: str) -> Resp:
     """management: 2. cloud pod register POD_NAME"""
-    return Resp.parse_raw(
+    resp = Resp.parse_raw(
         requests.post(
             clusters["5551"] + "/cloud/pod/", params={"pod_name": pod_name}
         ).content
     )
+    await update(WsType.POD)
+    return resp
 
 
 @app.delete("/cloud/pod/", dependencies=[Depends(verify_setup)])
 async def pod_rm(pod_name: str):
     "management: 3. cloud pod rm POD_NAME"
-    return Resp.parse_raw(
+    resp = Resp.parse_raw(
         requests.delete(
             clusters["5551"] + "/cloud/pod/", params={"pod_name": pod_name}
         ).content
     )
+    await update(WsType.POD)
+    return resp
 
 
 @app.get("/cloud/node/", dependencies=[Depends(verify_setup)])
@@ -182,23 +230,27 @@ async def node_ls(pod_name: str | None = None) -> Resp:
 @app.post("/cloud/node/", dependencies=[Depends(verify_setup)])
 async def node_register(node_name: str, pod_name: str | None = None) -> Resp:
     """management: 4. cloud register NODE_NAME [POD_ID]"""
-    return Resp.parse_raw(
+    resp = Resp.parse_raw(
         requests.post(
             clusters["5551"] + "/cloud/node/",
             params={"node_name": node_name, "pod_name": pod_name},
         ).content
     )
+    await update(WsType.NODE)
+    return resp
 
 
 @app.delete("/cloud/node/", dependencies=[Depends(verify_setup)])
 async def node_rm(node_name: str) -> Resp:
     """management: 5. cloud rm NODE_NAME"""
-    return Resp.parse_raw(
+    resp = Resp.parse_raw(
         requests.delete(
             clusters["5551"] + "/cloud/node/",
             params={"node_name": node_name},
         ).content
     )
+    await update(WsType.NODE)
+    return resp
 
 
 @app.get("/cloud/job/", dependencies=[Depends(verify_setup)])
@@ -225,6 +277,7 @@ async def job_launch(job_name: str, job_script: UploadFile) -> Resp:
     with open(os.path.join("tmp", f"{job.id}.sh"), "wb") as f:
         f.write(await job_script.read())
 
+    await update(WsType.JOB)
     return Resp(status=True, data={"job_id": job.id})
 
 
@@ -237,12 +290,14 @@ async def job_abort(job_id: str) -> Resp:
 
     job.status = Status.ABORTED
 
-    return Resp.parse_raw(
+    resp = Resp.parse_raw(
         requests.delete(
             clusters["5551"] + "/cloud/job/",
             params={"job_id": job_id},
         ).content
     )
+    await update(WsType.JOB)
+    return resp
 
 
 @app.get("/cloud/job/log/", dependencies=[Depends(verify_setup)])
@@ -276,4 +331,64 @@ async def callback(job_id: str) -> Resp:
     manager.jobs[job_id].status = Status.COMPLETED
     print(f"Job: {job_id} has been completed")
     print(manager.jobs)
+    await update(WsType.JOB)
     return Resp(status=True)
+
+
+async def update(type: WsType):
+    match type:
+        case WsType.POD:
+            await manager.ws.broadcast(
+                json.dumps(
+                    {
+                        "type": WsType.POD,
+                        "data": requests.get(clusters["5551"] + "/cloud/pod/").json()[
+                            "data"
+                        ],
+                    }
+                )
+            )
+        case WsType.NODE:
+            await manager.ws.broadcast(
+                json.dumps(
+                    {
+                        "type": WsType.NODE,
+                        "data": requests.get(clusters["5551"] + "/cloud/node/").json()[
+                            "data"
+                        ],
+                    }
+                )
+            )
+        case WsType.JOB:
+            await manager.ws.broadcast(
+                json.dumps(
+                    {
+                        "type": WsType.JOB,
+                        "data": [j.toJSON() for j in manager.jobs.values()],
+                    }
+                )
+            )
+        case WsType.ERROR:
+            await manager.ws.broadcast(
+                json.dumps(
+                    {
+                        "type": WsType.ERROR,
+                    }
+                )
+            )
+
+
+@app.websocket("/internal/update/")
+async def ws(websocket: WebSocket):
+    await manager.ws.connect(websocket)
+    try:
+        if manager.init:
+            await update(WsType.POD)
+            await update(WsType.NODE)
+            await update(WsType.JOB)
+        else:
+            await update(WsType.ERROR)
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.ws.disconnect(websocket)
