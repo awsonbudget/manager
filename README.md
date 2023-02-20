@@ -11,8 +11,11 @@ Once that is done, use `poetry shell` to activate the environment.
 
 In order to run the manager, you need 1 command:
 
-- To start the FastAPI server: `uvicorn src.main:app --reload --port 5550`
+- To start the FastAPI server: `uvicorn src.main:app --reload --port 5000`
 
 ## McGill VM
 
-- `uvicorn src.main:app --port 5000`
+If there is no ssl-certfile, then `mkcert 10.140.17.117`
+
+- `uvicorn src.main:app --port 5000 --ssl-keyfile=./10.140.17.117-key.pem --ssl-certfile=./10.140.17.117.pem`
+
