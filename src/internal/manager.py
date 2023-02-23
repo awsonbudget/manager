@@ -41,7 +41,7 @@ class Manager(object):
             await asyncio.sleep(3)
             count += 1
             if self.queue:
-                res = requests.get(clusters["5551"] + "/internal/available/").json()
+                res = requests.get(clusters["5551"] + "/internal/available").json()
                 if res["status"]:
                     job = self.queue.pop()
                     job.status = Status.RUNNING
