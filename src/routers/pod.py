@@ -18,6 +18,8 @@ async def pod_ls() -> Resp:
 @router.post("/cloud/pod/", dependencies=[Depends(verify_setup)])
 async def pod_register(pod_name: str) -> Resp:
     """management: 2. cloud pod register POD_NAME"""
+    if len(pod_name) >= 16:
+        return Resp(status=False, msg="manager: pod name is too long!")
     resp = Resp.parse_raw(
         requests.post(
             clusters["5551"] + "/cloud/pod/", params={"pod_name": pod_name}

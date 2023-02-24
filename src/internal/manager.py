@@ -12,7 +12,6 @@ from src.internal.type import Status, WsType
 
 class Job(object):
     def __init__(self, name: str, status: Status = Status.REGISTERED):
-        # TODO: manager needs a more centralized view of all jobs
         self.name: str = name
         self.id: str = str(uuid.uuid4())
         self.status: Status = status
