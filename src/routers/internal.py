@@ -17,6 +17,7 @@ async def callback(job_id: str) -> Resp:
     print(f"Job: {job_id} has been completed")
     print(manager.jobs)
     await update(WsType.JOB)
+    await update(WsType.NODE)
     return Resp(status=True)
 
 
