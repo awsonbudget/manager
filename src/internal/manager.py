@@ -62,6 +62,7 @@ class Manager(object):
                     print(f"Node: {job.node}")
                     print("--------------------")
                     await update(WsType.JOB)
+                    await update(WsType.NODE)
             else:
                 print(f"{count}: waiting for jobs")
 
