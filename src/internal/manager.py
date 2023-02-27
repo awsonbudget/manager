@@ -42,7 +42,7 @@ class Manager(object):
             if self.queue:
                 res = requests.get(clusters["5551"] + "/internal/available").json()
                 if res["status"]:
-                    job = self.queue.pop()
+                    job = self.queue.popleft()
                     job.status = Status.RUNNING
                     print("--------------------")
                     with open(f"tmp/{job.id}.sh") as f:
