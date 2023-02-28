@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType
@@ -16,7 +16,7 @@ async def pod_ls() -> Resp:
 
 
 @router.post("/cloud/pod/", dependencies=[Depends(verify_setup)])
-async def pod_register(pod_name: str) -> Resp:
+async def pod_register(background_tasks: BackgroundTasks, pod_name: str) -> Resp:
     """management: 2. cloud pod register POD_NAME"""
     if len(pod_name) >= 16:
         return Resp(status=False, msg="manager: pod name is too long!")
@@ -25,17 +25,17 @@ async def pod_register(pod_name: str) -> Resp:
             clusters["5551"] + "/cloud/pod/", params={"pod_name": pod_name}
         ).content
     )
-    await update(WsType.POD)
+    background_tasks.add_task(update, WsType.POD)
     return resp
 
 
 @router.delete("/cloud/pod/", dependencies=[Depends(verify_setup)])
-async def pod_rm(pod_name: str):
+async def pod_rm(background_tasks: BackgroundTasks, pod_name: str):
     "management: 3. cloud pod rm POD_NAME"
     resp = Resp.parse_raw(
         requests.delete(
             clusters["5551"] + "/cloud/pod/", params={"pod_name": pod_name}
         ).content
     )
-    await update(WsType.POD)
+    background_tasks.add_task(update, WsType.POD)
     return resp

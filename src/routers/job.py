@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType, Status
@@ -40,7 +40,7 @@ async def job_launch(job_name: str, job_script: UploadFile) -> Resp:
 
 
 @router.delete("/cloud/job/", dependencies=[Depends(verify_setup)])
-async def job_abort(job_id: str) -> Resp:
+async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
     """management: 7. cloud abort JOB_ID"""
     job = manager.jobs.get(job_id, None)
     if job == None:
@@ -54,7 +54,8 @@ async def job_abort(job_id: str) -> Resp:
             params={"job_id": job_id},
         ).content
     )
-    await update(WsType.JOB)
+    background_tasks.add_task(update, WsType.NODE)
+    background_tasks.add_task(update, WsType.JOB)
     return resp
 
 

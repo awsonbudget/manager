@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType
@@ -20,7 +20,9 @@ async def node_ls(pod_id: str | None = None) -> Resp:
 
 
 @router.post("/cloud/node/", dependencies=[Depends(verify_setup)])
-async def node_register(node_name: str, pod_id: str | None = None) -> Resp:
+async def node_register(
+    background_tasks: BackgroundTasks, node_name: str, pod_id: str | None = None
+) -> Resp:
     """management: 4. cloud register NODE_NAME [POD_ID]"""
     if len(node_name) >= 16:
         return Resp(status=False, msg="manager: node name is too long!")
@@ -30,12 +32,13 @@ async def node_register(node_name: str, pod_id: str | None = None) -> Resp:
             params={"node_name": node_name, "pod_id": pod_id},
         ).content
     )
-    await update(WsType.NODE)
+    background_tasks.add_task(update, WsType.POD)
+    background_tasks.add_task(update, WsType.NODE)
     return resp
 
 
 @router.delete("/cloud/node/", dependencies=[Depends(verify_setup)])
-async def node_rm(node_name: str) -> Resp:
+async def node_rm(background_tasks: BackgroundTasks, node_name: str) -> Resp:
     """management: 5. cloud rm NODE_NAME"""
     resp = Resp.parse_raw(
         requests.delete(
@@ -43,7 +46,8 @@ async def node_rm(node_name: str) -> Resp:
             params={"node_name": node_name},
         ).content
     )
-    await update(WsType.NODE)
+    background_tasks.add_task(update, WsType.POD)
+    background_tasks.add_task(update, WsType.NODE)
     return resp
 
 
