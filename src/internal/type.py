@@ -3,6 +3,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
+## Define the basic data attributes in the system
 
 class Resp(BaseModel):
     status: bool

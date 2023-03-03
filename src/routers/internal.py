@@ -6,7 +6,7 @@ from src.internal.auth import verify_setup
 
 router = APIRouter(tags=["internal"])
 
-
+## Receive and verify the callback
 @router.post("/internal/callback/", dependencies=[Depends(verify_setup)])
 async def callback(background_tasks: BackgroundTasks, job_id: str) -> Resp:
     if job_id not in manager.jobs:
@@ -21,7 +21,7 @@ async def callback(background_tasks: BackgroundTasks, job_id: str) -> Resp:
     background_tasks.add_task(update, WsType.JOB)
     return Resp(status=True)
 
-
+## Maintain real-time update
 @router.websocket("/internal/update/")
 async def ws(websocket: WebSocket):
     await manager.ws.connect(websocket)

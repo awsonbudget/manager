@@ -9,7 +9,7 @@ import requests
 
 from src.internal.type import Status, WsType
 
-
+## Create job data structure
 class Job(object):
     def __init__(self, name: str, status: Status = Status.REGISTERED):
         self.name: str = name
@@ -25,14 +25,14 @@ class Job(object):
             "node": self.node,
         }
 
-
+## Create Manager data structure
 class Manager(object):
     def __init__(self):
         self.queue: deque[Job] = deque()
         self.jobs: dict[str, Job] = dict()
         self.init = False
         self.ws = ConnectionManager()
-
+    # Managing the job queuing process
     async def main_worker(self):
         count = 0
         while True:
@@ -42,6 +42,7 @@ class Manager(object):
             if self.queue:
                 res = requests.get(clusters["5551"] + "/internal/available").json()
                 if res["status"]:
+                    # Allocate a job to run
                     job = self.queue.popleft()
                     job.status = Status.RUNNING
                     print("--------------------")
@@ -88,7 +89,7 @@ class ConnectionManager:
             except RuntimeError:
                 self.disconnect(connection)
 
-
+# Manage dataflow update
 async def update(type: WsType):
     print(len(manager.ws.active_connections))
     match type:

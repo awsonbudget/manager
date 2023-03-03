@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.internal.manager import manager
 from src.routers import init, pod, job, node, internal
 
+## Create the mainstream of FastAPI structure
 app = FastAPI()
 
 origins = ["*"]
