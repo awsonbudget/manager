@@ -4,14 +4,16 @@ import json
 import uuid
 
 from fastapi import WebSocket
-from dotenv import dotenv_values
 import requests
 
 from src.internal.type import Status, WsType
+from src.utils.fetch import fetch_pods, fetch_nodes
+from src.utils.config import clusters
 
 
 class Job(object):
     def __init__(self, name: str, status: Status = Status.REGISTERED):
+        # FIXME: Add cluster field
         self.name: str = name
         self.id: str = str(uuid.uuid4())
         self.status: Status = status
@@ -30,17 +32,20 @@ class Manager(object):
     def __init__(self):
         self.queue: deque[Job] = deque()
         self.jobs: dict[str, Job] = dict()
+        self.pod_map: dict[str, str] = dict()
+        self.node_map: dict[str, str] = dict()
         self.init = False
         self.ws = ConnectionManager()
 
     async def main_worker(self):
+        # FIXME: Fix worker to support multiple clusters
         count = 0
         while True:
             print(self.queue)
             await asyncio.sleep(3)
             count += 1
             if self.queue:
-                res = requests.get(clusters["5551"] + "/internal/available").json()
+                res = requests.get(clusters["heavy"] + "/internal/available").json()
                 if res["status"]:
                     job = self.queue.popleft()
                     job.status = Status.RUNNING
@@ -94,25 +99,11 @@ async def update(type: WsType):
     match type:
         case WsType.POD:
             await manager.ws.broadcast(
-                json.dumps(
-                    {
-                        "type": WsType.POD,
-                        "data": requests.get(clusters["5551"] + "/cloud/pod/").json()[
-                            "data"
-                        ],
-                    }
-                )
+                json.dumps({"type": WsType.POD, "data": (await fetch_pods()).data})
             )
         case WsType.NODE:
             await manager.ws.broadcast(
-                json.dumps(
-                    {
-                        "type": WsType.NODE,
-                        "data": requests.get(clusters["5551"] + "/cloud/node/").json()[
-                            "data"
-                        ],
-                    }
-                )
+                json.dumps({"type": WsType.NODE, "data": (await fetch_nodes()).data})
             )
         case WsType.JOB:
             await manager.ws.broadcast(
@@ -133,9 +124,4 @@ async def update(type: WsType):
             )
 
 
-config = dotenv_values(".env")
 manager = Manager()
-
-assert config["CLUSTER"] != None
-
-clusters: dict[str, str] = {"5551": config["CLUSTER"]}

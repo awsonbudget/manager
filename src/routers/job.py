@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType, Status
-from src.internal.manager import clusters, manager, update, Job
+from src.internal.manager import manager, update, Job
+from src.utils.config import clusters
 from src.internal.auth import verify_setup
 
 
@@ -42,6 +43,7 @@ async def job_launch(job_name: str, job_script: UploadFile) -> Resp:
 @router.delete("/cloud/job/", dependencies=[Depends(verify_setup)])
 async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
     """management: 7. cloud abort JOB_ID"""
+    # FIXME: Need to know which cluster to abort the job
     job = manager.jobs.get(job_id, None)
     if job == None:
         return Resp(status=False, msg="manager: job not found in the job list")
@@ -62,6 +64,7 @@ async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
 @router.get("/cloud/job/log/", dependencies=[Depends(verify_setup)])
 async def job_log(job_id: str) -> Resp:
     """monitoring: 4. cloud job log JOB_ID"""
+    # FIXME: Need to know which cluster to get the job log
     return Resp.parse_raw(
         requests.get(
             clusters["5551"] + "/cloud/job/log/",
