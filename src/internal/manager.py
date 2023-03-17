@@ -90,7 +90,7 @@ class ConnectionManager:
 
 
 async def update(type: WsType):
-    print(len(manager.ws.active_connections))
+    print("There are", len(manager.ws.active_connections), "active WS connection(s)")
     match type:
         case WsType.POD:
             await manager.ws.broadcast(
