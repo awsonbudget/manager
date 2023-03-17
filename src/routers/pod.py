@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType
-from src.internal.manager import update
+from src.utils.ws import update
 from src.internal.auth import verify_setup
 from src.utils.fetch import fetch_pods
 from src.utils.config import clusters

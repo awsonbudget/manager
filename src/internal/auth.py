@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from src.internal.manager import manager
+from src.utils.config import manager
 
 
 async def verify_setup():

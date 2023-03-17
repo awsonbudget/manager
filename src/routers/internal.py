@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, BackgroundTasks
 
 from src.internal.type import Resp, WsType, Status
-from src.internal.manager import manager, update
+from src.utils.config import manager
+from src.utils.ws import update
 from src.internal.auth import verify_setup
 
 router = APIRouter(tags=["internal"])

@@ -1,5 +1,7 @@
 from dotenv import dotenv_values
 
+from src.internal.manager import Manager
+
 config = dotenv_values(".env")
 assert config["CLUSTER_HEAVY"] != None
 assert config["CLUSTER_MEDIUM"] != None
@@ -10,3 +12,5 @@ clusters: dict[str, str] = {
     "medium": config["CLUSTER_MEDIUM"],
     "light": config["CLUSTER_LIGHT"],
 }
+
+manager = Manager()

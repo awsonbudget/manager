@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType
-from src.internal.manager import manager, update
+from src.utils.config import manager
+from src.utils.fetch import fetch_nodes
+from src.utils.ws import update
 from src.internal.auth import verify_setup
 from src.utils.config import clusters
 
@@ -13,12 +15,7 @@ router = APIRouter(tags=["node"])
 @router.get("/cloud/node/", dependencies=[Depends(verify_setup)])
 async def node_ls(pod_id: str | None = None) -> Resp:
     """monitoring: 2. cloud node ls [RES_POD_ID]"""
-    # FIXME: need to know which cluster has that pod
-    return Resp.parse_raw(
-        requests.get(
-            clusters["5551"] + "/cloud/node/", params={"pod_id": pod_id}
-        ).content
-    )
+    return await fetch_nodes(pod_id)
 
 
 @router.post("/cloud/node/", dependencies=[Depends(verify_setup)])
@@ -37,7 +34,7 @@ async def node_register(
     ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
-    manager.node_map[resp["data"]] = cluster
+    manager.node_map[resp["data"]] = cluster  # resp["data"] is node_id
     background_tasks.add_task(update, WsType.POD)
     background_tasks.add_task(update, WsType.NODE)
     return Resp(status=True, data=resp["msg"], msg=resp["msg"])
@@ -64,10 +61,12 @@ async def node_rm(background_tasks: BackgroundTasks, node_id: str) -> Resp:
 @router.get("/cloud/node/log/", dependencies=[Depends(verify_setup)])
 async def node_log(node_id: str) -> Resp:
     """monitoring: 5. cloud node log NODE_ID"""
-    # FIXME: need to know which cluster to get the node log
+    cluster = manager.node_map.get(node_id)
+    if cluster is None:
+        return Resp(status=False, msg=f"manager: node_id {node_id} not found")
     return Resp.parse_raw(
         requests.get(
-            clusters["5551"] + "/cloud/node/log/",
+            clusters[cluster] + "/cloud/node/log/",
             params={"node_id": node_id},
         ).content
     )

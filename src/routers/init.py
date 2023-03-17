@@ -4,8 +4,8 @@ from fastapi import APIRouter
 import requests
 
 from src.internal.type import Resp, WsType
-from src.internal.manager import manager, update
-from src.utils.config import clusters
+from src.utils.config import manager, clusters
+from src.utils.ws import update
 
 
 router = APIRouter(tags=["init"])

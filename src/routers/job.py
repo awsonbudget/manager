@@ -4,7 +4,9 @@ from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks
 import requests
 
 from src.internal.type import Resp, WsType, Status
-from src.internal.manager import manager, update, Job
+from src.internal.manager import Job
+from src.utils.config import manager
+from src.utils.ws import update
 from src.utils.config import clusters
 from src.internal.auth import verify_setup
 

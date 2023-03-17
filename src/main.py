@@ -3,8 +3,8 @@ import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from src.internal.worker import main_worker
 
-from src.internal.manager import manager
 from src.routers import init, pod, job, node, internal
 
 app = FastAPI()
@@ -22,7 +22,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(manager.main_worker())
+    asyncio.create_task(main_worker())
 
 
 @app.middleware("http")
