@@ -31,7 +31,7 @@ async def fetch_nodes(pod_id: str | None):
             return Resp(status=False, msg=f"manager: {e}")
 
         resp = requests.get(
-            cluster_group[location.get_cluster_type][location.get_cluster_id()]
+            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
             + endpoint,
             params={"pod_id": pod_id},
         ).json()
