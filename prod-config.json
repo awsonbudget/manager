@@ -1,0 +1,13 @@
+{
+    "cluster_group": {
+        "heavy": {
+            "default": "http://10.140.17.118:5001"
+        },
+        "medium": {
+            "default": "http://10.140.17.117:5001"
+        },
+        "light": {
+            "default": "http://10.140.17.116:5001"
+        }
+    }
+}
