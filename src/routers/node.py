@@ -20,22 +20,26 @@ async def node_ls(pod_id: str | None = None) -> Resp:
 
 @router.post("/cloud/node/", dependencies=[Depends(verify_setup)])
 async def node_register(
-    background_tasks: BackgroundTasks, node_name: str, pod_id: str
+    background_tasks: BackgroundTasks, node_type: str, node_name: str, pod_id: str
 ) -> Resp:
     """management: 4. cloud register NODE_NAME POD_ID"""
-    # TODO: do not hardcode default
     if len(node_name) >= 16:
         return Resp(status=False, msg="manager: node name is too long!")
-    location = manager.pod_map.get(pod_id)
-    if location is None:
-        return Resp(status=False, msg=f"manager: pod_id {pod_id} not found")
+    try:
+        location = manager.get_pod_location(pod_id)
+    except Exception as e:
+        print(e)
+        return Resp(status=False, msg=f"manager: {e}")
+
     resp = requests.post(
-        cluster_group[location.get_cluster_type()]["default"] + "/cloud/node/",
-        params={"node_name": node_name, "pod_id": pod_id},
+        cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+        + "/cloud/node/",
+        params={"node_type": node_type, "node_name": node_name, "pod_id": pod_id},
     ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
-    manager.node_map[resp["data"]] = location  # resp["data"] is node_id
+
+    manager.add_node(resp["data"], location)  # resp["data"] is node_id
     background_tasks.add_task(update, WsType.POD)
     background_tasks.add_task(update, WsType.NODE)
     return Resp(status=True, data=resp["msg"], msg=resp["msg"])
@@ -44,17 +48,26 @@ async def node_register(
 @router.delete("/cloud/node/", dependencies=[Depends(verify_setup)])
 async def node_rm(background_tasks: BackgroundTasks, node_id: str) -> Resp:
     """management: 5. cloud rm NODE_NAME"""
-    # TODO: do not hardcode default
-    location = manager.node_map.get(node_id)
-    if location is None:
-        return Resp(status=False, msg=f"manager: node_id {node_id} not found")
+    try:
+        location = manager.get_node_location(node_id)
+    except Exception as e:
+        print(e)
+        return Resp(status=False, msg=f"manager: {e}")
+
     resp = requests.delete(
-        cluster_group[location]["default"] + "/cloud/node/",
+        cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+        + "/cloud/node/",
         params={"node_id": node_id},
     ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
-    manager.node_map.pop(node_id)
+
+    try:
+        manager.remove_node(node_id)
+    except Exception as e:
+        print(e)
+        return Resp(status=False, msg=f"manager: {e}")
+
     background_tasks.add_task(update, WsType.POD)
     background_tasks.add_task(update, WsType.NODE)
     return Resp(status=True, msg=resp["msg"])
@@ -62,14 +75,17 @@ async def node_rm(background_tasks: BackgroundTasks, node_id: str) -> Resp:
 
 @router.get("/cloud/node/log/", dependencies=[Depends(verify_setup)])
 async def node_log(node_id: str) -> Resp:
-    """monitoring: 5. cloud node log NODE_ID"""
-    # TODO: do not hardcode default
-    location = manager.node_map.get(node_id)
-    if location is None:
-        return Resp(status=False, msg=f"manager: node_id {node_id} not found")
+    """cloud node log NODE_ID"""
+    try:
+        location = manager.get_node_location(node_id)
+    except Exception as e:
+        print(e)
+        return Resp(status=False, msg=f"manager: {e}")
+
     return Resp.parse_raw(
         requests.get(
-            cluster_group[location]["default"] + "/cloud/node/log/",
+            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+            + "/cloud/node/log/",
             params={"node_id": node_id},
         ).content
     )

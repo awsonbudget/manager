@@ -24,14 +24,18 @@ async def fetch_pods():
 async def fetch_nodes(pod_id: str | None):
     endpoint = "/cloud/node/"
     if pod_id != None:
-        location = manager.pod_map.get(pod_id)
-        if location is None:
-            return Resp(status=False, msg=f"manager: node_id {pod_id} not found")
+        try:
+            location = manager.get_pod_location(pod_id)
+        except Exception as e:
+            print(e)
+            return Resp(status=False, msg=f"manager: {e}")
+
         resp = requests.get(
             cluster_group[location.get_cluster_type][location.get_cluster_id()]
             + endpoint,
             params={"pod_id": pod_id},
         ).json()
+
         if resp["status"] != True:
             return Resp(status=False, msg=resp["msg"])
         return Resp(status=True, data=resp["data"])

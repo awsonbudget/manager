@@ -40,8 +40,8 @@ async def init() -> Resp:
                     status=False,
                     msg=f"manager: {type} cluster {cluster_id} failed to create pod",
                 )
-            manager.pod_map[res["data"]] = Location(
-                type, cluster_id
+            manager.add_pod(
+                res["data"], Location(type, cluster_id)
             )  # res.data here is the pod_id
 
     manager.init = True

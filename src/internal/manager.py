@@ -39,10 +39,44 @@ class Manager(object):
     def __init__(self):
         self.queue: deque[Job] = deque()
         self.jobs: dict[str, Job] = dict()
-        self.pod_map: dict[str, Location] = dict()
-        self.node_map: dict[str, Location] = dict()
+        self.__pod_map: dict[str, Location] = dict()  # key is the pod id
+        self.__node_map: dict[str, Location] = dict()  # key is the node id
         self.init = False
         self.ws = ConnectionManager()
+
+    def add_pod(self, pod_id: str, location: Location):
+        if pod_id in self.__pod_map:
+            raise Exception("Pod already exists")
+        self.__pod_map[pod_id] = location
+
+    def get_pod_location(self, pod_id: str) -> Location:
+        try:
+            return self.__pod_map[pod_id]
+        except KeyError:
+            raise Exception("Pod does not exist")
+
+    def remove_pod(self, pod_id: str):
+        try:
+            del self.__pod_map[pod_id]
+        except KeyError:
+            raise Exception("Pod does not exist")
+
+    def add_node(self, node_id: str, location: Location):
+        if node_id in self.__node_map:
+            raise Exception("Node already exists")
+        self.__node_map[node_id] = location
+
+    def get_node_location(self, node_id: str) -> Location:
+        try:
+            return self.__node_map[node_id]
+        except KeyError:
+            raise Exception("Node does not exist")
+
+    def remove_node(self, node_id: str):
+        try:
+            del self.__node_map[node_id]
+        except KeyError:
+            raise Exception("Node does not exist")
 
 
 class ConnectionManager:
