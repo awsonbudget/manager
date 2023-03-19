@@ -5,7 +5,7 @@ from src.internal.type import Resp, WsType
 from src.utils.ws import update
 from src.internal.auth import verify_setup
 from src.utils.fetch import fetch_pods
-from src.utils.config import clusters
+from src.utils.config import cluster_group
 
 
 router = APIRouter(tags=["pod"])
@@ -25,7 +25,8 @@ async def pod_register(background_tasks: BackgroundTasks, pod_name: str) -> Resp
         return Resp(status=False, msg="manager: pod name is too long!")
     resp = Resp.parse_raw(
         requests.post(
-            clusters["light"] + "/cloud/pod/", params={"pod_name": pod_name}
+            cluster_group["light"]["default"] + "/cloud/pod/",
+            params={"pod_name": pod_name},
         ).content
     )
     background_tasks.add_task(update, WsType.POD)
@@ -38,7 +39,8 @@ async def pod_rm(background_tasks: BackgroundTasks, pod_name: str):
     # TODO: Default to light cluster for the moment, make this more flexible in the future
     resp = Resp.parse_raw(
         requests.delete(
-            clusters["light"] + "/cloud/pod/", params={"pod_name": pod_name}
+            cluster_group["light"]["default"] + "/cloud/pod/",
+            params={"pod_name": pod_name},
         ).content
     )
     background_tasks.add_task(update, WsType.POD)

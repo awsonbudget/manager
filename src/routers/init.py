@@ -3,8 +3,9 @@ import shutil
 from fastapi import APIRouter
 import requests
 
+from src.internal.manager import Location
 from src.internal.type import Resp, WsType
-from src.utils.config import manager, clusters
+from src.utils.config import manager, cluster_group
 from src.utils.ws import update
 
 
@@ -23,18 +24,25 @@ async def init() -> Resp:
         print("tmp was already cleaned")
 
     # TODO: Make this concurrent
-    for name, url in clusters.items():
-        res = requests.post(url + "/cloud/").json()
-        if res["status"] == False:
-            return Resp(
-                status=False, msg=f"manager: cluster {name} failed to initialize"
-            )
-        res = requests.post(url + "/cloud/pod", params={"pod_name": name}).json()
-        if res["status"] == False:
-            return Resp(
-                status=False, msg=f"manager: cluster {name} failed to create pod"
-            )
-        manager.pod_map[res["data"]] = name  # res.data here is the pod_id
+    for type, clusters in cluster_group.items():
+        for cluster_id, addr in clusters.items():
+            res = requests.post(addr + "/cloud/").json()
+            if res["status"] == False:
+                return Resp(
+                    status=False,
+                    msg=f"manager: {type} cluster {cluster_id} failed to initialize",
+                )
+            res = requests.post(
+                addr + "/cloud/pod/", params={"pod_name": f"{type}-{cluster_id}"}
+            ).json()
+            if res["status"] == False:
+                return Resp(
+                    status=False,
+                    msg=f"manager: {type} cluster {cluster_id} failed to create pod",
+                )
+            manager.pod_map[res["data"]] = Location(
+                type, cluster_id
+            )  # res.data here is the pod_id
 
     manager.init = True
     await update(WsType.POD)

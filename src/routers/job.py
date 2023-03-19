@@ -7,7 +7,7 @@ from src.internal.type import Resp, WsType, Status
 from src.internal.manager import Job
 from src.utils.config import manager
 from src.utils.ws import update
-from src.utils.config import clusters
+from src.utils.config import cluster_group
 from src.internal.auth import verify_setup
 
 
@@ -54,7 +54,7 @@ async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
 
     resp = Resp.parse_raw(
         requests.delete(
-            clusters["5551"] + "/cloud/job/",
+            cluster_group["heavy"]["default"] + "/cloud/job/",
             params={"job_id": job_id},
         ).content
     )
@@ -69,7 +69,7 @@ async def job_log(job_id: str) -> Resp:
     # FIXME: Need to know which cluster to get the job log
     return Resp.parse_raw(
         requests.get(
-            clusters["5551"] + "/cloud/job/log/",
+            cluster_group["heavy"]["default"] + "/cloud/job/log/",
             params={"job_id": job_id},
         ).content
     )

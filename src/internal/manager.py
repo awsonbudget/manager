@@ -23,12 +23,24 @@ class Job(object):
         }
 
 
+class Location(object):
+    def __init__(self, cluster_type: str, cluster_id: str):
+        self.cluster_type: str = cluster_type
+        self.cluster_id: str = cluster_id
+
+    def get_cluster_type(self) -> str:
+        return self.cluster_type
+
+    def get_cluster_id(self) -> str:
+        return self.cluster_id
+
+
 class Manager(object):
     def __init__(self):
         self.queue: deque[Job] = deque()
         self.jobs: dict[str, Job] = dict()
-        self.pod_map: dict[str, str] = dict()
-        self.node_map: dict[str, str] = dict()
+        self.pod_map: dict[str, Location] = dict()
+        self.node_map: dict[str, Location] = dict()
         self.init = False
         self.ws = ConnectionManager()
 

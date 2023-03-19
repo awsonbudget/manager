@@ -1,7 +1,7 @@
 import requests
 import asyncio
 from src.internal.type import Status, WsType
-from src.utils.config import manager, clusters
+from src.utils.config import manager, cluster_group
 from src.utils.ws import update
 
 
@@ -13,14 +13,16 @@ async def main_worker():
         await asyncio.sleep(3)
         count += 1
         if manager.queue:
-            res = requests.get(clusters["heavy"] + "/internal/available").json()
+            res = requests.get(
+                cluster_group["heavy"]["default"] + "/internal/available"
+            ).json()
             if res["status"]:
                 job = manager.queue.popleft()
                 job.status = Status.RUNNING
                 print("--------------------")
                 with open(f"tmp/{job.id}.sh") as f:
                     res = requests.post(
-                        clusters["heavy"] + "/cloud/job/",
+                        cluster_group["heavy"]["default"] + "/cloud/job/",
                         params={
                             "job_name": job.name,
                             "job_id": job.id,
