@@ -20,6 +20,11 @@ app.add_middleware(
 )
 
 
+@app.get("/ping/")
+async def hello() -> str:
+    return "pong"
+
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(main_worker())
