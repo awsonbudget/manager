@@ -26,7 +26,7 @@ async def init() -> Resp:
     # TODO: Make this concurrent
     for type, clusters in cluster_group.items():
         for cluster_id, addr in clusters.items():
-            res = requests.post(addr + "/cloud/").json()
+            res = requests.post(addr + "/cloud/", params={"type": type}).json()
             if res["status"] == False:
                 return Resp(
                     status=False,
