@@ -36,7 +36,7 @@ async def server_launch(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
 
     print(resp["data"])
     background_tasks.add_task(update, WsType.NODE)
-    return Resp(status=True, msg=resp["msg"])
+    return Resp(status=True, msg=resp["msg"], data=resp["data"])
 
 
 @router.post("/cloud/server/resume/", dependencies=[Depends(verify_setup)])
@@ -58,7 +58,7 @@ async def server_resume(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
 
     print(resp["data"])
     background_tasks.add_task(update, WsType.NODE)
-    return Resp(status=True, msg=resp["msg"])
+    return Resp(status=True, msg=resp["msg"], data=resp["data"])
 
 
 @router.post("/cloud/server/pause/", dependencies=[Depends(verify_setup)])
@@ -80,4 +80,4 @@ async def server_pause(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
 
     print(resp["data"])
     background_tasks.add_task(update, WsType.NODE)
-    return Resp(status=True, msg=resp["msg"])
+    return Resp(status=True, msg=resp["msg"], data=resp["data"])
