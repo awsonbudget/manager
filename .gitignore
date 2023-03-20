@@ -162,3 +162,5 @@ cython_debug/
 tmp/*
 sync.sh
 config.json
+cs.mcgill.ca.crt
+cs.mcgill.ca.key
