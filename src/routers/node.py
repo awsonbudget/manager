@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+import subprocess
+
 import requests
+from fastapi import APIRouter, Depends, BackgroundTasks
 
 from src.internal.type import Resp, WsType
 from src.utils.config import manager
@@ -67,6 +69,13 @@ async def node_rm(background_tasks: BackgroundTasks, node_id: str) -> Resp:
     except Exception as e:
         print(e)
         return Resp(status=False, msg=f"manager: {e}")
+
+    if resp["data"]["delete"] == True:
+        backend_name = f"{location.get_cluster_type()}_pod"
+        server_name = node_id
+        command = f"echo 'experimental-mode on; del server {backend_name}/{server_name}' | sudo socat stdio /var/run/haproxy/admin.sock"
+        print("HAProxy delete: " + command)
+        subprocess.run(command, shell=True, check=True)
 
     background_tasks.add_task(update, WsType.POD)
     background_tasks.add_task(update, WsType.NODE)

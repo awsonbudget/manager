@@ -65,10 +65,10 @@ async def server_launch(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
             ).netloc.split(":")[0]
             port = server["port"]
             command = f"echo 'experimental-mode on; add server {backend_name}/{server_name} {ip_addr}:{port}' | sudo socat stdio /var/run/haproxy/admin.sock"
-            print(command)
+            print("HAProxy add: " + command)
             subprocess.run(command, shell=True, check=True)
             command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state ready' | sudo socat stdio /var/run/haproxy/admin.sock"
-            print(command)
+            print("HAProxy set: " + command)
             subprocess.run(command, shell=True, check=True)
 
     background_tasks.add_task(update, WsType.NODE)
@@ -99,7 +99,7 @@ async def server_resume(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
             backend_name = f"{server_type}_pod"
             server_name = server["node_id"]
             command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state ready' | sudo socat stdio /var/run/haproxy/admin.sock"
-            print(command)
+            print("HAProxy set: " + command)
             subprocess.run(command, shell=True, check=True)
 
     background_tasks.add_task(update, WsType.NODE)
@@ -130,7 +130,7 @@ async def server_pause(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
             backend_name = f"{server_type}_pod"
             server_name = server["node_id"]
             command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state maint' | sudo socat stdio /var/run/haproxy/admin.sock"
-            print(command)
+            print("HAProxy set: " + command)
             subprocess.run(command, shell=True, check=True)
 
     background_tasks.add_task(update, WsType.NODE)
