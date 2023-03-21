@@ -1,11 +1,12 @@
 import shutil
+import subprocess
 
 from fastapi import APIRouter
 import requests
 
 from src.internal.manager import Location
 from src.internal.type import Resp, WsType
-from src.utils.config import manager, cluster_group
+from src.utils.config import manager, cluster_group, is_prod
 from src.utils.ws import update
 
 
@@ -22,6 +23,9 @@ async def init() -> Resp:
         shutil.rmtree("tmp")
     except OSError:
         print("tmp was already cleaned")
+
+    if is_prod:
+        subprocess.run("sudo systemctl haproxy restart", shell=True)
 
     # TODO: Make this concurrent
     for type, clusters in cluster_group.items():
