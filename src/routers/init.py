@@ -25,7 +25,7 @@ async def init() -> Resp:
         print("tmp was already cleaned")
 
     if is_prod:
-        subprocess.run("sudo systemctl haproxy restart", shell=True)
+        subprocess.run("sudo systemctl restart haproxy", shell=True, check=True)
 
     # TODO: Make this concurrent
     for type, clusters in cluster_group.items():
