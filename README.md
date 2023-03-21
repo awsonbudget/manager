@@ -19,3 +19,7 @@ If there is no ssl-certfile, then `mkcert 10.140.17.117`
 
 - `uvicorn src.main:app --port 5000 --ssl-keyfile=./10.140.17.117-key.pem --ssl-certfile=./10.140.17.117.pem`
 
+
+Monitor HAProxy
+
+- `watch 'echo "show stat" | sudo socat stdio /var/run/haproxy/admin.sock | cut -d "," -f 1-2,5-10,34-36 | column -s, -t'`
