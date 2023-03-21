@@ -15,7 +15,7 @@ router = APIRouter(tags=["server"])
 
 
 @router.get("/cloud/server/", dependencies=[Depends(verify_setup)])
-async def server_ls(
+async def server_stat(
     background_tasks: BackgroundTasks, pod_id: str, node_id: str | None = None
 ) -> Resp:
     try:
