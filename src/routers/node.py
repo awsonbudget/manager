@@ -73,6 +73,9 @@ async def node_rm(background_tasks: BackgroundTasks, node_id: str) -> Resp:
     if resp["data"]["delete"] == True:
         backend_name = f"{location.get_cluster_type()}_pod"
         server_name = node_id
+        command = f"echo 'experimental-mode on; set server {backend_name}/{server_name}' state maint | sudo socat stdio /var/run/haproxy/admin.sock"
+        print("HAProxy set: " + command)
+        subprocess.run(command, shell=True, check=True)
         command = f"echo 'experimental-mode on; del server {backend_name}/{server_name}' | sudo socat stdio /var/run/haproxy/admin.sock"
         print("HAProxy delete: " + command)
         subprocess.run(command, shell=True, check=True)
