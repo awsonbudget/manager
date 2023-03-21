@@ -9,5 +9,6 @@
         "light": {
             "default": "http://10.140.17.116:5001"
         }
-    }
+    },
+    "prod": true
 }

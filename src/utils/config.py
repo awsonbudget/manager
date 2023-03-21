@@ -5,4 +5,6 @@ from src.internal.manager import Manager
 manager = Manager()
 
 with open("config.json") as f:
-    cluster_group = json.load(f)["cluster_group"]
+    config = json.load(f)
+    cluster_group = config["cluster_group"]
+    is_prod = config["prod"]

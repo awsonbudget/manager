@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks
-import requests
+import subprocess
 
-from src.internal.type import Resp, WsType, Status
-from src.internal.manager import Job
+import requests
+from fastapi import APIRouter, Depends, BackgroundTasks
+
+from src.internal.type import Resp, WsType
 from src.utils.config import manager
 from src.utils.ws import update
-from src.utils.config import cluster_group
+from src.utils.config import cluster_group, is_prod
 from src.internal.auth import verify_setup
 
 
@@ -51,8 +52,22 @@ async def server_launch(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
     ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
-
     print(resp["data"])
+
+    if is_prod:
+        server_type = location.get_cluster_type()
+        for server in resp["data"]:
+            backend_name = f"{server_type}_pod"
+            server_name = server["node_id"]
+            ip_addr = "10.140.17.117"
+            port = server["port"]
+            command = f"echo 'experimental-mode on; add server {backend_name}/{server_name} {ip_addr}:{port}' | sudo socat stdio /var/run/haproxy/admin.sock"
+            print(command)
+            subprocess.run(command, shell=True, check=True)
+            command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state ready' | sudo socat stdio /var/run/haproxy/admin.sock"
+            print(command)
+            subprocess.run(command, shell=True, check=True)
+
     background_tasks.add_task(update, WsType.NODE)
     return Resp(status=True, msg=resp["msg"], data=resp["data"])
 
@@ -73,8 +88,19 @@ async def server_resume(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
     ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
-
     print(resp["data"])
+
+    if is_prod:
+        server_type = location.get_cluster_type()
+        for server in resp["data"]:
+            backend_name = f"{server_type}_pod"
+            server_name = server["node_id"]
+            # ip_addr = "10.140.17.117"
+            # port = server["port"]
+            command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state ready' | sudo socat stdio /var/run/haproxy/admin.sock"
+            print(command)
+            subprocess.run(command, shell=True, check=True)
+
     background_tasks.add_task(update, WsType.NODE)
     return Resp(status=True, msg=resp["msg"], data=resp["data"])
 
@@ -95,7 +121,18 @@ async def server_pause(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
     ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
-
     print(resp["data"])
+
+    if is_prod:
+        server_type = location.get_cluster_type()
+        for server in resp["data"]:
+            backend_name = f"{server_type}_pod"
+            server_name = server["node_id"]
+            # ip_addr = "10.140.17.117"
+            # port = server["port"]
+            command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state maint' | sudo socat stdio /var/run/haproxy/admin.sock"
+            print(command)
+            subprocess.run(command, shell=True, check=True)
+
     background_tasks.add_task(update, WsType.NODE)
     return Resp(status=True, msg=resp["msg"], data=resp["data"])
