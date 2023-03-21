@@ -1,4 +1,5 @@
 import subprocess
+from urllib.parse import urlparse
 
 import requests
 from fastapi import APIRouter, Depends, BackgroundTasks
@@ -59,7 +60,9 @@ async def server_launch(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
         for server in resp["data"]:
             backend_name = f"{server_type}_pod"
             server_name = server["node_id"]
-            ip_addr = "10.140.17.117"
+            ip_addr = urlparse(
+                cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+            ).netloc.split(":")[0]
             port = server["port"]
             command = f"echo 'experimental-mode on; add server {backend_name}/{server_name} {ip_addr}:{port}' | sudo socat stdio /var/run/haproxy/admin.sock"
             print(command)
@@ -95,8 +98,6 @@ async def server_resume(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
         for server in resp["data"]:
             backend_name = f"{server_type}_pod"
             server_name = server["node_id"]
-            # ip_addr = "10.140.17.117"
-            # port = server["port"]
             command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state ready' | sudo socat stdio /var/run/haproxy/admin.sock"
             print(command)
             subprocess.run(command, shell=True, check=True)
@@ -128,8 +129,6 @@ async def server_pause(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
         for server in resp["data"]:
             backend_name = f"{server_type}_pod"
             server_name = server["node_id"]
-            # ip_addr = "10.140.17.117"
-            # port = server["port"]
             command = f"echo 'experimental-mode on; set server {backend_name}/{server_name} state maint' | sudo socat stdio /var/run/haproxy/admin.sock"
             print(command)
             subprocess.run(command, shell=True, check=True)
