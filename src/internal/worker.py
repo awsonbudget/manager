@@ -13,11 +13,13 @@ async def main_worker():
         print(manager.queue)
         await asyncio.sleep(3)
         count += 1
-        if manager.queue:
-            for cluster_type in cluster_group.keys():
+
+        for cluster_type in cluster_group.keys():
+            if manager.queue:
                 res = requests.get(
                     cluster_group[cluster_type]["default"] + "/internal/available"
                 ).json()
+
                 if res["status"]:
                     job = manager.queue.popleft()
                     job.status = Status.RUNNING
