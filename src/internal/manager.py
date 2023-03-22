@@ -41,6 +41,7 @@ class Manager(object):
         self.jobs: dict[str, Job] = dict()
         self.__pod_map: dict[str, Location] = dict()  # key is the pod id
         self.__node_map: dict[str, Location] = dict()  # key is the node id
+        self.__job_map: dict[str, Location] = dict()  # key is the job id
         self.init = False
         self.ws = ConnectionManager()
 
@@ -77,6 +78,17 @@ class Manager(object):
             del self.__node_map[node_id]
         except KeyError:
             raise Exception("Node does not exist")
+
+    def add_job(self, job_id: str, location: Location):
+        if job_id in self.__job_map:
+            raise Exception("Job already exists")
+        self.__job_map[job_id] = location
+
+    def get_job_location(self, job_id: str) -> Location:
+        try:
+            return self.__job_map[job_id]
+        except KeyError:
+            raise Exception("Job does not exist")
 
 
 class ConnectionManager:

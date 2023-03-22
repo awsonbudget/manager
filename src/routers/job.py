@@ -44,8 +44,12 @@ async def job_launch(job_name: str, job_script: UploadFile) -> Resp:
 
 @router.delete("/cloud/job/", dependencies=[Depends(verify_setup)])
 async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
-    """management: 7. cloud abort JOB_ID"""
-    # FIXME: Need to know which cluster to abort the job
+    """cloud abort JOB_ID"""
+    try:
+        location = manager.get_job_location(job_id)
+    except Exception as e:
+        return Resp(status=False, msg=f"manager: {e}")
+
     job = manager.jobs.get(job_id, None)
     if job == None:
         return Resp(status=False, msg="manager: job not found in the job list")
@@ -54,7 +58,8 @@ async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
 
     resp = Resp.parse_raw(
         requests.delete(
-            cluster_group["heavy"]["default"] + "/cloud/job/",
+            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+            + "/cloud/job/",
             params={"job_id": job_id},
         ).content
     )
@@ -65,11 +70,15 @@ async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
 
 @router.get("/cloud/job/log/", dependencies=[Depends(verify_setup)])
 async def job_log(job_id: str) -> Resp:
-    """monitoring: 4. cloud job log JOB_ID"""
-    # FIXME: Need to know which cluster to get the job log
+    """cloud job log JOB_ID"""
+    try:
+        location = manager.get_job_location(job_id)
+    except Exception as e:
+        return Resp(status=False, msg=f"manager: {e}")
     return Resp.parse_raw(
         requests.get(
-            cluster_group["heavy"]["default"] + "/cloud/job/log/",
+            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+            + "/cloud/job/log/",
             params={"job_id": job_id},
         ).content
     )

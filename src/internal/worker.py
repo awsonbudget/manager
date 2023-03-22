@@ -1,5 +1,6 @@
 import requests
 import asyncio
+from src.internal.manager import Location
 from src.internal.type import Status, WsType
 from src.utils.config import manager, cluster_group
 from src.utils.ws import update
@@ -21,7 +22,7 @@ async def main_worker():
                     job = manager.queue.popleft()
                     job.status = Status.RUNNING
                     print("--------------------")
-                    with open(f"tmp/{job.id}.sh") as f:
+                    with open(f"tmp/{job.id}.sh", "r") as f:
                         res = requests.post(
                             cluster_group[cluster_type]["default"] + "/cloud/job/",
                             params={
@@ -32,6 +33,10 @@ async def main_worker():
                         ).json()
                         print(res)
                         manager.jobs[job.id].node = res["data"]["node_id"]
+                        manager.add_job(
+                            job.id,
+                            Location(cluster_type=cluster_type, cluster_id="default"),
+                        )
 
                     print("Job allocated")
                     print(f"Name: {job.name}")
