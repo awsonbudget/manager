@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
-import requests
-from src.internal.manager import Location
+import httpx
 
+from src.internal.manager import Location
 from src.internal.type import Resp, WsType
 from src.utils.ws import update
 from src.internal.auth import verify_setup
@@ -29,10 +29,13 @@ async def pod_register(
 
     if len(pod_name) >= 16:
         return Resp(status=False, msg="manager: pod name is too long!")
-    resp = requests.post(
-        cluster_group[pod_type]["default"] + "/cloud/pod/",
-        params={"pod_name": pod_name},
-    ).json()
+    async with httpx.AsyncClient(base_url=cluster_group[pod_type]["default"]) as client:
+        resp = (
+            await client.post(
+                "/cloud/pod/",
+                params={"pod_name": pod_name},
+            )
+        ).json()
 
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
@@ -51,12 +54,16 @@ async def pod_rm(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
     except Exception as e:
         return Resp(status=False, msg=f"{e}")
 
-    resp = Resp.parse_raw(
-        requests.delete(
-            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-            + "/cloud/pod/",
-            params={"pod_id": pod_id},
-        ).content
-    )
+    async with httpx.AsyncClient(
+        base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+    ) as client:
+        resp = Resp.parse_raw(
+            (
+                await client.delete(
+                    "/cloud/pod/",
+                    params={"pod_id": pod_id},
+                )
+            ).content
+        )
     background_tasks.add_task(update, WsType.POD)
     return resp

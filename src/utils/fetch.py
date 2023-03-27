@@ -1,4 +1,4 @@
-import requests
+import httpx
 
 from src.internal.type import Resp
 from src.utils.config import cluster_group, manager
@@ -10,13 +10,14 @@ async def fetch_pods():
 
     for type, clusters in cluster_group.items():
         for cluster_id, addr in clusters.items():
-            resp = requests.get(addr + endpoint).json()
-            if resp["status"] != True:
-                return Resp(
-                    status=False,
-                    msg=f"manager: {type} cluster [{cluster_id}] reported an error!",
-                )
-            data.extend(resp["data"])
+            async with httpx.AsyncClient(base_url=addr) as client:
+                resp = (await client.get(endpoint)).json()
+                if resp["status"] != True:
+                    return Resp(
+                        status=False,
+                        msg=f"manager: {type} cluster [{cluster_id}] reported an error!",
+                    )
+                data.extend(resp["data"])
 
     return Resp(status=True, data=data)
 
@@ -30,11 +31,17 @@ async def fetch_nodes(pod_id: str | None):
             print(e)
             return Resp(status=False, msg=f"manager: {e}")
 
-        resp = requests.get(
-            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-            + endpoint,
-            params={"pod_id": pod_id},
-        ).json()
+        async with httpx.AsyncClient(
+            base_url=cluster_group[location.get_cluster_type()][
+                location.get_cluster_id()
+            ]
+        ) as client:
+            resp = (
+                await client.get(
+                    endpoint,
+                    params={"pod_id": pod_id},
+                )
+            ).json()
 
         if resp["status"] != True:
             return Resp(status=False, msg=resp["msg"])
@@ -44,12 +51,13 @@ async def fetch_nodes(pod_id: str | None):
         data = []
         for type, clusters in cluster_group.items():
             for cluster_id, addr in clusters.items():
-                resp = requests.get(addr + endpoint).json()
-                if resp["status"] != True:
-                    return Resp(
-                        status=False,
-                        msg=f"manager: {type} cluster [{cluster_id}] reported an error!",
-                    )
-                data.extend(resp["data"])
+                async with httpx.AsyncClient(base_url=addr) as client:
+                    resp = (await client.get(endpoint)).json()
+                    if resp["status"] != True:
+                        return Resp(
+                            status=False,
+                            msg=f"manager: {type} cluster [{cluster_id}] reported an error!",
+                        )
+                    data.extend(resp["data"])
 
         return Resp(status=True, data=data)

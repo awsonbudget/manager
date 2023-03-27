@@ -1,7 +1,7 @@
 import os
 
 from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks
-import requests
+import httpx
 
 from src.internal.type import Resp, WsType, Status
 from src.internal.manager import Job
@@ -56,13 +56,17 @@ async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
 
     job.status = Status.ABORTED
 
-    resp = Resp.parse_raw(
-        requests.delete(
-            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-            + "/cloud/job/",
-            params={"job_id": job_id},
-        ).content
-    )
+    async with httpx.AsyncClient(
+        base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+    ) as client:
+        resp = Resp.parse_raw(
+            (
+                await client.delete(
+                    "/cloud/job/",
+                    params={"job_id": job_id},
+                )
+            ).content
+        )
     background_tasks.add_task(update, WsType.NODE)
     background_tasks.add_task(update, WsType.JOB)
     return resp
@@ -75,10 +79,15 @@ async def job_log(job_id: str) -> Resp:
         location = manager.get_job_location(job_id)
     except Exception as e:
         return Resp(status=False, msg=f"manager: {e}")
-    return Resp.parse_raw(
-        requests.get(
-            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-            + "/cloud/job/log/",
-            params={"job_id": job_id},
-        ).content
-    )
+
+    async with httpx.AsyncClient(
+        base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+    ) as client:
+        return Resp.parse_raw(
+            (
+                await client.get(
+                    "/cloud/job/log/",
+                    params={"job_id": job_id},
+                )
+            ).content
+        )

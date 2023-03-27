@@ -1,6 +1,6 @@
 import subprocess
 
-import requests
+import httpx
 from fastapi import APIRouter, Depends, BackgroundTasks
 
 from src.internal.type import Resp, WsType
@@ -33,11 +33,19 @@ async def node_register(
         print(e)
         return Resp(status=False, msg=f"manager: {e}")
 
-    resp = requests.post(
-        cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-        + "/cloud/node/",
-        params={"node_type": node_type, "node_name": node_name, "pod_id": pod_id},
-    ).json()
+    async with httpx.AsyncClient(
+        base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+    ) as client:
+        resp = (
+            await client.post(
+                "/cloud/node/",
+                params={
+                    "node_type": node_type,
+                    "node_name": node_name,
+                    "pod_id": pod_id,
+                },
+            )
+        ).json()
     if resp["status"] == False:
         return Resp(status=False, msg=resp["msg"])
 
@@ -56,13 +64,17 @@ async def node_rm(background_tasks: BackgroundTasks, node_id: str) -> Resp:
         print(e)
         return Resp(status=False, msg=f"manager: {e}")
 
-    resp = requests.delete(
-        cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-        + "/cloud/node/",
-        params={"node_id": node_id},
-    ).json()
-    if resp["status"] == False:
-        return Resp(status=False, msg=resp["msg"])
+    async with httpx.AsyncClient(
+        base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+    ) as client:
+        resp = (
+            await client.delete(
+                "/cloud/node/",
+                params={"node_id": node_id},
+            )
+        ).json()
+        if resp["status"] == False:
+            return Resp(status=False, msg=resp["msg"])
 
     try:
         manager.remove_node(node_id)
@@ -94,10 +106,14 @@ async def node_log(node_id: str) -> Resp:
         print(e)
         return Resp(status=False, msg=f"manager: {e}")
 
-    return Resp.parse_raw(
-        requests.get(
-            cluster_group[location.get_cluster_type()][location.get_cluster_id()]
-            + "/cloud/node/log/",
-            params={"node_id": node_id},
-        ).content
-    )
+    async with httpx.AsyncClient(
+        base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
+    ) as client:
+        return Resp.parse_raw(
+            (
+                await client.get(
+                    "/cloud/node/log/",
+                    params={"node_id": node_id},
+                )
+            ).content
+        )

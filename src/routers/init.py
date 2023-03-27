@@ -2,7 +2,7 @@ import shutil
 import subprocess
 
 from fastapi import APIRouter
-import requests
+import httpx
 
 from src.internal.manager import Location
 from src.internal.type import Resp, WsType
@@ -30,23 +30,28 @@ async def init() -> Resp:
     # TODO: Make this concurrent
     for type, clusters in cluster_group.items():
         for cluster_id, addr in clusters.items():
-            res = requests.post(addr + "/cloud/", params={"type": type}).json()
-            if res["status"] == False:
-                return Resp(
-                    status=False,
-                    msg=f"manager: {type} cluster {cluster_id} failed to initialize",
-                )
-            res = requests.post(
-                addr + "/cloud/pod/", params={"pod_name": f"{type}-{cluster_id}"}
-            ).json()
-            if res["status"] == False:
-                return Resp(
-                    status=False,
-                    msg=f"manager: {type} cluster {cluster_id} failed to create pod",
-                )
-            manager.add_pod(
-                res["data"], Location(type, cluster_id)
-            )  # res.data here is the pod_id
+            async with httpx.AsyncClient(base_url=addr) as client:
+                res = (
+                    await client.post("/cloud/", params={"type": type}, timeout=None)
+                ).json()
+                if res["status"] == False:
+                    return Resp(
+                        status=False,
+                        msg=f"manager: {type} cluster {cluster_id} failed to initialize",
+                    )
+                res = (
+                    await client.post(
+                        "/cloud/pod/", params={"pod_name": f"{type}-{cluster_id}"}
+                    )
+                ).json()
+                if res["status"] == False:
+                    return Resp(
+                        status=False,
+                        msg=f"manager: {type} cluster {cluster_id} failed to create pod",
+                    )
+                manager.add_pod(
+                    res["data"], Location(type, cluster_id)
+                )  # res.data here is the pod_id
 
     manager.init = True
     await update(WsType.POD)

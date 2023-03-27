@@ -1,6 +1,6 @@
-import requests
 import httpx
 import asyncio
+
 from src.internal.manager import Location
 from src.internal.type import Status, WsType
 from src.utils.config import manager, cluster_group
