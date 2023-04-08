@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.internal.worker import main_worker
-from src.routers import init, pod, job, node, server, internal
+from src.routers import init, pod, job, node, server, internal, elasticity
 
 app = FastAPI()
 
@@ -44,4 +44,5 @@ app.include_router(pod.router)
 app.include_router(node.router)
 app.include_router(job.router)
 app.include_router(server.router)
+app.include_router(elasticity.router)
 app.include_router(internal.router)
