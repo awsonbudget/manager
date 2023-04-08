@@ -27,34 +27,35 @@ async def main_worker():
 
                 if res["status"]:
                     job = manager.queue.popleft()
-                    job.status = Status.RUNNING
+                    job.job_status = Status.RUNNING
                     print("--------------------")
-                    with open(f"tmp/{job.id}.sh", "rb") as f:
+                    with open(f"tmp/{job.job_id}.sh", "rb") as f:
                         async with httpx.AsyncClient() as client:
                             res = (
                                 await client.post(
                                     cluster_group[cluster_type]["default"]
                                     + "/cloud/job/",
                                     params={
-                                        "job_name": job.name,
-                                        "job_id": job.id,
+                                        "job_name": job.job_name,
+                                        "job_id": job.job_id,
                                     },
                                     files={"job_script": f},
                                 )
                             ).json()
                             print(res)
-                            manager.jobs[job.id].node = res["data"]["node_id"]
+                            manager.jobs[job.job_id].node_id = res["data"]["node_id"]
+                            manager.jobs[job.job_id].pod_id = res["data"]["pod_id"]
                             manager.add_job(
-                                job.id,
+                                job.job_id,
                                 Location(
                                     cluster_type=cluster_type, cluster_id="default"
                                 ),
                             )
 
                     print("Job allocated")
-                    print(f"Name: {job.name}")
-                    print(f"ID: {job.id}")
-                    print(f"Node: {job.node}")
+                    print(f"Name: {job.job_name}")
+                    print(f"ID: {job.job_id}")
+                    print(f"NodeID: {job.node_id}")
                     print("--------------------")
                     await update(WsType.JOB)
                     await update(WsType.NODE)

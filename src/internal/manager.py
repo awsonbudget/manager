@@ -7,19 +7,21 @@ from src.internal.type import Status
 
 
 class Job(object):
-    def __init__(self, name: str, status: Status = Status.REGISTERED):
+    def __init__(self, job_name: str, job_status: Status = Status.REGISTERED):
         # FIXME: Add cluster field
-        self.name: str = name
-        self.id: str = str(uuid.uuid4())
-        self.status: Status = status
-        self.node: str | None = None
+        self.job_name: str = job_name
+        self.job_id: str = str(uuid.uuid4())
+        self.job_status: Status = job_status
+        self.node_id: str | None = None
+        self.pod_id: str | None = None
 
     def toJSON(self) -> dict:
         return {
-            "id": self.id,
-            "name": self.name,
-            "status": self.status,
-            "node": self.node,
+            "job_id": self.job_id,
+            "job_name": self.job_name,
+            "job_status": self.job_status,
+            "node_id": self.node_id,
+            "pod_id": self.pod_id,
         }
 
 

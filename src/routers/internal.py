@@ -14,7 +14,7 @@ async def callback(background_tasks: BackgroundTasks, job_id: str) -> Resp:
         raise Exception(
             f"manager: job {job_id} received from callback is not in the job list"
         )
-    manager.jobs[job_id].status = Status.COMPLETED
+    manager.jobs[job_id].job_status = Status.COMPLETED
     print(f"Job: {job_id} has been completed")
     print(manager.jobs)
     background_tasks.add_task(update, WsType.POD)

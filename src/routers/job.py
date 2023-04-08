@@ -20,7 +20,7 @@ async def job_ls(node_id: str | None = None) -> Resp:
     if node_id != None:
         return Resp(
             status=True,
-            data=[j.toJSON() for j in manager.jobs.values() if j.node == node_id],
+            data=[j.toJSON() for j in manager.jobs.values() if j.node_id == node_id],
         )
 
     return Resp(status=True, data=[j.toJSON() for j in manager.jobs.values()])
@@ -29,17 +29,17 @@ async def job_ls(node_id: str | None = None) -> Resp:
 @router.post("/cloud/job/", dependencies=[Depends(verify_setup)])
 async def job_launch(job_name: str, job_script: UploadFile) -> Resp:
     """management: 6. cloud launch PATH_TO_JOB"""
-    job = Job(name=job_name)
+    job = Job(job_name=job_name)
     manager.queue.append(job)
     print(manager.queue)
-    manager.jobs[job.id] = job
+    manager.jobs[job.job_id] = job
 
     os.makedirs("tmp", exist_ok=True)
-    with open(os.path.join("tmp", f"{job.id}.sh"), "wb") as f:
+    with open(os.path.join("tmp", f"{job.job_id}.sh"), "wb") as f:
         f.write(await job_script.read())
 
     await update(WsType.JOB)
-    return Resp(status=True, data={"job_id": job.id})
+    return Resp(status=True, data={"job_id": job.job_id})
 
 
 @router.delete("/cloud/job/", dependencies=[Depends(verify_setup)])
@@ -54,7 +54,7 @@ async def job_abort(background_tasks: BackgroundTasks, job_id: str) -> Resp:
     if job == None:
         return Resp(status=False, msg="manager: job not found in the job list")
 
-    job.status = Status.ABORTED
+    job.job_status = Status.ABORTED
 
     async with httpx.AsyncClient(
         base_url=cluster_group[location.get_cluster_type()][location.get_cluster_id()]
