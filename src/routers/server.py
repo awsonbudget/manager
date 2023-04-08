@@ -31,6 +31,7 @@ async def server_stat(
             await client.get(
                 "/cloud/server/",
                 params={"pod_id": pod_id, "node_id": node_id},
+                timeout=None,
             )
         ).json()
         if resp["status"] == False:
