@@ -3,8 +3,8 @@ import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from src.internal.worker import main_worker
 
+from src.internal.worker import main_worker
 from src.routers import init, pod, job, node, server, internal
 
 app = FastAPI()

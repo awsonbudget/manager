@@ -23,6 +23,14 @@ async def callback(background_tasks: BackgroundTasks, job_id: str) -> Resp:
     return Resp(status=True)
 
 
+@router.post("/internal/refresh/", dependencies=[Depends(verify_setup)])
+async def refresh(background_tasks: BackgroundTasks) -> Resp:
+    background_tasks.add_task(update, WsType.POD)
+    background_tasks.add_task(update, WsType.NODE)
+    background_tasks.add_task(update, WsType.JOB)
+    return Resp(status=True)
+
+
 @router.websocket("/internal/update/")
 async def ws(websocket: WebSocket):
     await manager.ws.connect(websocket)
