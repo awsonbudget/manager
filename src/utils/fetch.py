@@ -11,7 +11,7 @@ async def fetch_pods():
     for type, clusters in cluster_group.items():
         for cluster_id, addr in clusters.items():
             async with httpx.AsyncClient(base_url=addr) as client:
-                resp = (await client.get(endpoint)).json()
+                resp = (await client.get(endpoint, timeout=None)).json()
                 if resp["status"] != True:
                     return Resp(
                         status=False,
@@ -40,6 +40,7 @@ async def fetch_nodes(pod_id: str | None):
                 await client.get(
                     endpoint,
                     params={"pod_id": pod_id},
+                    timeout=None,
                 )
             ).json()
 
@@ -52,7 +53,7 @@ async def fetch_nodes(pod_id: str | None):
         for type, clusters in cluster_group.items():
             for cluster_id, addr in clusters.items():
                 async with httpx.AsyncClient(base_url=addr) as client:
-                    resp = (await client.get(endpoint)).json()
+                    resp = (await client.get(endpoint, timeout=None)).json()
                     if resp["status"] != True:
                         return Resp(
                             status=False,

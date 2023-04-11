@@ -58,6 +58,7 @@ async def server_launch(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
             await client.post(
                 "/cloud/server/launch/",
                 params={"pod_id": pod_id},
+                timeout=None,
             )
         ).json()
         if resp["status"] == False:
@@ -100,6 +101,7 @@ async def server_resume(background_tasks: BackgroundTasks, pod_id: str) -> Resp:
             await client.post(
                 "/cloud/server/resume/",
                 params={"pod_id": pod_id},
+                timeout=None,
             )
         ).json()
         if resp["status"] == False:
