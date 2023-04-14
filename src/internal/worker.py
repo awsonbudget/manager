@@ -1,10 +1,21 @@
-import httpx
+import pickle
+from datetime import datetime
 import asyncio
+
+import httpx
 
 from src.internal.manager import Location
 from src.internal.type import Status, WsType
-from src.utils.config import manager, cluster_group
+from src.utils.config import manager, cluster_group, etcd_client
 from src.utils.ws import update
+
+
+async def state_saver():
+    while True:
+        await asyncio.sleep(10)
+        serialized_manager = pickle.dumps(manager)
+        etcd_client.put("manager", serialized_manager)
+        print(f"{datetime.now()}: Manager state saved")
 
 
 async def main_worker():

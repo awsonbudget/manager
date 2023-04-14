@@ -92,6 +92,18 @@ class Manager(object):
         except KeyError:
             raise Exception("Job does not exist")
 
+    def setup_ws(self):
+        self.ws = ConnectionManager()
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["ws"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.setup_ws()
+
 
 class ConnectionManager:
     def __init__(self):
