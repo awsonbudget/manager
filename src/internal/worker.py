@@ -20,11 +20,9 @@ async def state_saver():
 
 async def main_worker():
     # FIXME: Fix worker to support non-default pods
-    count = 0
     while True:
         print(manager.queue)
         await asyncio.sleep(3)
-        count += 1
 
         for cluster_type in cluster_group.keys():
             if manager.queue:
@@ -71,4 +69,4 @@ async def main_worker():
                     await update(WsType.JOB)
                     await update(WsType.NODE)
         else:
-            print(f"{count}: waiting for jobs")
+            print(f"{datetime.now()}: waiting for jobs")
